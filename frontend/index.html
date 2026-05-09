@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Fintech App</title>
+</head>
+<body>
+  <h1>Users</h1>
+
+  <input id="name" placeholder="Enter name" />
+  <button onclick="addUser()">Add</button>
+
+  <ul id="users"></ul>
+
+  <script>
+    // In Kubernetes, call backend service directly via DNS
+    // In local dev, use localhost:3000
+    const isKubernetes = window.location.hostname.includes('fintech') || window.location.hostname.match(/\d+\.\d+\.\d+\.\d+/);
+    const API = isKubernetes 
+      ? '/api'  // Proxy via nginx ingress to backend service
+      : 'http://localhost:3000/api';
+
+    async function loadUsers() {
+      try {
+        const res = await fetch(API + "/users");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const users = await res.json();
+        const list = document.getElementById("users");
+        list.innerHTML = "";
+        users.forEach(u => {
+          const li = document.createElement("li");
+          li.textContent = u.name;
+          list.appendChild(li);
+        });
+      } catch (err) {
+        console.error('Error loading users:', err);
+        document.getElementById("users").innerHTML = `<li style="color:red">Error: ${err.message}</li>`;
+      }
+    }
+
+    async function addUser() {
+      const name = document.getElementById("name").value;
+      if (!name) return;
+      try {
+        const res = await fetch(API + "/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        document.getElementById("name").value = "";
+        loadUsers();
+      } catch (err) {
+        console.error('Error adding user:', err);
+        alert('Error: ' + err.message);
+      }
+    }
+
+    loadUsers();
+  </script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: init-db
+  namespace: default
+spec:
+  template:
+    spec:
+      serviceAccountName: default
+      containers:
+      - name: init-db
+        image: node:20-alpine
+        command: 
+          - sh
+          - -c
+          - |
+            mkdir /work && cd /work && npm init -y && npm install pg
+            cat > init.js << 'SCRIPT'
+            const { Pool } = require('pg');
+            const pool = new Pool({
+              host: process.env.DB_HOST,
+              user: process.env.DB_USER,
+              password: process.env.DB_PASSWORD,
+              database: 'postgres',
+              port: 5432,
+              ssl: { rejectUnauthorized: false }
+            });
+            
+            (async () => {
+              try {
+                // Create database
+                try {
+                  await pool.query('CREATE DATABASE fintech');
+                  console.log('✓ Database fintech created');
+                } catch (e) {
+                  if (e.code !== '42P04') throw e;
+                  console.log('✓ Database fintech already exists');
+                }
+                
+                // Switch to fintech DB and create table
+                const pool2 = new Pool({
+                  host: process.env.DB_HOST,
+                  user: process.env.DB_USER,
+                  password: process.env.DB_PASSWORD,
+                  database: 'fintech',
+                  port: 5432,
+                  ssl: { rejectUnauthorized: false }
+                });
+                
+                await pool2.query(`
+                  CREATE TABLE IF NOT EXISTS users (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(100) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                  )
+                `);
+                console.log('✓ Table users created');
+                
+                await pool2.query(`
+                  DELETE FROM users
+                `);
+                
+                await pool2.query(`
+                  INSERT INTO users (name) VALUES ('Alice'), ('Bob'), ('Charlie')
+                `);
+                console.log('✓ Sample data inserted');
+                
+                pool2.end();
+              } catch (err) {
+                console.error('Error:', err.message);
+                process.exit(1);
+              }
+              pool.end();
+            })();
+            SCRIPT
+            node init.js
+        env:
+        - name: DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: fintech-secrets
+              key: db_host
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: fintech-secrets
+              key: db_user
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: fintech-secrets
+              key: db_password
+      restartPolicy: Never
+  backoffLimit: 3

@@ -1,0 +1,24 @@
+name: CD - ArgoCD Sync
+
+on:
+  repository_dispatch:
+    types: [image-pushed]
+  workflow_dispatch: {}
+
+jobs:
+  sync-argocd:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show dispatch payload
+        run: echo '${{ toJson(github.event.client_payload) }}'
+
+      - name: Trigger Argo CD app sync
+        env:
+          ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
+          ARGOCD_TOKEN: ${{ secrets.ARGOCD_TOKEN }}
+          ARGOCD_APP: web-app
+        run: |
+          curl -k -sS -X POST "https://${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP}/sync" \
+            -H "Authorization: Bearer ${ARGOCD_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d '{"prune":true,"dryRun":false}'

@@ -1,0 +1,7 @@
+node_modules
+.env
+dist
+build
+*.log
+.terraform
+**/.DS_Store
