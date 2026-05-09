@@ -408,10 +408,11 @@ Navigate to **Settings → Secrets and variables → Actions** and add:
 
 | Secret | Description |
 |---|---|
-| `AZURE_CREDENTIALS` | JSON output from `az ad sp create-for-rbac` |
+| `AZURE_CLIENT_ID` | Azure service principal app ID |
+| `AZURE_TENANT_ID` | Azure tenant ID |
+| `AZURE_SUBSCRIPTION_ID` | Azure subscription ID |
+| `AZURE_CLIENT_SECRET` | Azure service principal password |
 | `ACR_LOGIN_SERVER` | e.g. `myregistry.azurecr.io` |
-| `ACR_USERNAME` | ACR username (from Access Keys) |
-| `ACR_PASSWORD` | ACR password (from Access Keys) |
 | `ARGOCD_SERVER` | ArgoCD server endpoint (IP or DNS) |
 | `ARGOCD_TOKEN` | ArgoCD API token |
 | `GH_TOKEN` | GitHub Personal Access Token (for dispatch) |
@@ -425,7 +426,11 @@ az ad sp create-for-rbac \
   --scopes /subscriptions/<subscription-id> \
   --sdk-auth
 
-# Paste the full JSON output into the AZURE_CREDENTIALS secret
+# Use the JSON output to populate:
+# - AZURE_CLIENT_ID
+# - AZURE_TENANT_ID
+# - AZURE_SUBSCRIPTION_ID
+# - AZURE_CLIENT_SECRET
 ```
 
 ### Step 3 — Generate ArgoCD API Token
